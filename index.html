@@ -1,0 +1,2527 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NIA — Neppo Intelligence Architect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ============ TOKENS ============ */
+    :root {
+      --green: #65CC65;
+      --green-glow: rgba(101, 204, 101, .35);
+      --slate: #252C3B;
+      --purple: #6C169E;
+      --purple-glow: rgba(108, 22, 158, .45);
+      --white: #FFFFFF;
+      --bg: #06070A;
+      --bg-1: #0B0D13;
+      --bg-2: #11141C;
+      --line: rgba(255, 255, 255, .08);
+      --line-2: rgba(255, 255, 255, .14);
+      --muted: rgba(255, 255, 255, .55);
+      --muted-2: rgba(255, 255, 255, .7);
+      --display: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+      --serif: 'Instrument Serif', ui-serif, Georgia, serif;
+      --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html,
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: var(--display);
+      font-weight: 400;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+      overflow-x: hidden
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none
+    }
+
+    img {
+      display: block;
+      max-width: 100%
+    }
+
+    ::selection {
+      background: var(--green);
+      color: #000
+    }
+
+    /* ============ BACKDROP ============ */
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(900px 600px at 12% -10%, rgba(108, 22, 158, .28), transparent 60%),
+        radial-gradient(700px 500px at 95% 8%, rgba(101, 204, 101, .10), transparent 65%),
+        radial-gradient(1200px 700px at 50% 100%, rgba(108, 22, 158, .18), transparent 70%),
+        var(--bg);
+    }
+
+    .grid-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse at 50% 30%, #000 30%, transparent 80%);
+    }
+
+    .noise {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      opacity: .05;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    }
+
+    /* Particles */
+    .particles {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden
+    }
+
+    .particle {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green-glow);
+      opacity: .5;
+      animation: float 18s linear infinite
+    }
+
+    .particle.p {
+      background: #c98cff;
+      box-shadow: 0 0 8px var(--purple-glow)
+    }
+
+    @keyframes float {
+      0% {
+        transform: translate3d(0, 0, 0);
+        opacity: 0
+      }
+
+      10% {
+        opacity: .7
+      }
+
+      90% {
+        opacity: .6
+      }
+
+      100% {
+        transform: translate3d(40px, -120vh, 0);
+        opacity: 0
+      }
+    }
+
+    /* ============ SHARED ============ */
+    .container {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 28px
+    }
+
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--muted-2);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 18px;
+      height: 1px;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green-glow)
+    }
+
+    .h-display {
+      font-family: var(--display);
+      font-weight: 600;
+      letter-spacing: -.04em;
+      line-height: 1.02
+    }
+
+    .h-serif {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-style: italic;
+      letter-spacing: -.01em
+    }
+
+    /* ============ NAV ============ */
+    nav.top {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(16px) saturate(140%);
+      -webkit-backdrop-filter: blur(16px) saturate(140%);
+      background: rgba(6, 7, 10, .55);
+      border-bottom: 1px solid var(--line);
+    }
+
+    nav.top .wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 28px;
+      max-width: 1240px;
+      margin: 0 auto
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 600;
+      letter-spacing: -.02em
+    }
+
+    .logo-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--purple) 0%, #2a0a48 100%);
+      position: relative;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, .06), 0 8px 30px rgba(108, 22, 158, .4);
+    }
+
+    .logo-mark::after {
+      content: "";
+      position: absolute;
+      inset: 2px;
+      border-radius: 7px;
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, .25), transparent 60%);
+    }
+
+    .logo-mark svg {
+      width: 18px;
+      height: 18px;
+      color: #fff;
+      position: relative;
+      z-index: 1
+    }
+
+    .logo-text {
+      font-size: 15px
+    }
+
+    .logo-text small {
+      display: block;
+      font-size: 10px;
+      font-family: var(--mono);
+      color: var(--muted);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-top: 1px
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      align-items: center
+    }
+
+    .nav-links a {
+      font-size: 13.5px;
+      color: var(--muted-2);
+      padding: 8px 14px;
+      border-radius: 8px;
+      transition: all .2s
+    }
+
+    .nav-links a:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, .04)
+    }
+
+    .nav-cta {
+      display: flex;
+      gap: 10px;
+      align-items: center
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 18px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 500;
+      transition: all .25s ease;
+      cursor: pointer;
+      border: 1px solid transparent;
+      font-family: var(--display);
+    }
+
+    .btn-ghost {
+      color: #fff;
+      border-color: var(--line-2);
+      background: rgba(255, 255, 255, .02)
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, .06);
+      border-color: rgba(255, 255, 255, .22)
+    }
+
+    .btn-primary {
+      color: #06170A;
+      background: var(--green);
+      box-shadow: 0 8px 30px var(--green-glow), inset 0 1px 0 rgba(255, 255, 255, .4);
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 40px var(--green-glow), inset 0 1px 0 rgba(255, 255, 255, .5)
+    }
+
+    .btn .arrow {
+      transition: transform .25s
+    }
+
+    .btn:hover .arrow {
+      transform: translateX(3px)
+    }
+
+    @media (max-width: 900px) {
+      .nav-links {
+        display: none
+      }
+    }
+
+    /* ============ HERO ============ */
+    .hero {
+      position: relative;
+      padding: 96px 0 80px;
+      overflow: hidden
+    }
+
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 64px;
+      align-items: center
+    }
+
+    @media (max-width:1024px) {
+      .hero-inner {
+        grid-template-columns: 1fr;
+        gap: 48px
+      }
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 14px 7px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .03);
+      border: 1px solid var(--line-2);
+      font-family: var(--mono);
+      font-size: 11.5px;
+      letter-spacing: .05em;
+      color: #e7e7e7;
+      backdrop-filter: blur(10px);
+    }
+
+    .badge-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--green), #1b8a1b);
+      box-shadow: 0 0 12px var(--green-glow);
+      display: grid;
+      place-items: center;
+      color: #001;
+      font-size: 10px
+    }
+
+    .badge strong {
+      color: var(--green);
+      font-weight: 600;
+      margin-left: 2px
+    }
+
+    h1.hero-title {
+      margin-top: 28px;
+      font-family: var(--display);
+      font-weight: 600;
+      font-size: clamp(56px, 8.4vw, 128px);
+      line-height: .92;
+      letter-spacing: -.055em;
+    }
+
+    h1.hero-title .sub {
+      display: block;
+      margin-top: 18px;
+      font-family: var(--serif);
+      font-style: italic;
+      font-weight: 400;
+      font-size: clamp(22px, 2.4vw, 34px);
+      color: #e9e9ee;
+      letter-spacing: -.005em;
+      line-height: 1.15;
+    }
+
+    .hero-grad {
+      background: linear-gradient(180deg, #ffffff 0%, #b8b8c6 110%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero-desc {
+      margin-top: 30px;
+      font-size: 17.5px;
+      line-height: 1.6;
+      color: var(--muted-2);
+      max-width: 560px;
+    }
+
+    .hero-cta {
+      margin-top: 36px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center
+    }
+
+    .hero-meta {
+      margin-top: 44px;
+      display: flex;
+      gap: 28px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding-top: 28px;
+      border-top: 1px dashed var(--line);
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--mono);
+      font-size: 11.5px;
+      letter-spacing: .06em;
+      color: var(--muted)
+    }
+
+    .pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 0 0 var(--green-glow);
+      animation: pulse 2.2s infinite
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 var(--green-glow)
+      }
+
+      70% {
+        box-shadow: 0 0 0 10px transparent
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 transparent
+      }
+    }
+
+    /* HERO MOCKUP */
+    .mockup {
+      position: relative;
+      border-radius: 22px;
+      background: linear-gradient(160deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .01));
+      border: 1px solid var(--line-2);
+      backdrop-filter: blur(20px);
+      box-shadow:
+        0 30px 80px rgba(0, 0, 0, .55),
+        0 0 0 1px rgba(255, 255, 255, .02),
+        inset 0 1px 0 rgba(255, 255, 255, .06);
+      overflow: hidden;
+    }
+
+    .mockup::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: 22px;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(101, 204, 101, .4), transparent 30%, transparent 70%, rgba(108, 22, 158, .45));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    .mockup-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(0, 0, 0, .25);
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #3a3f4d
+    }
+
+    .dot.r {
+      background: #ff5f57
+    }
+
+    .dot.y {
+      background: #ffbd2e
+    }
+
+    .dot.g {
+      background: #28c840
+    }
+
+    .mockup-bar .url {
+      margin-left: 14px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      padding: 5px 12px;
+      background: rgba(255, 255, 255, .04);
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mockup-body {
+      padding: 22px;
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 18px;
+      min-height: 430px;
+      background: linear-gradient(180deg, rgba(11, 13, 19, .7), rgba(6, 7, 10, .95))
+    }
+
+    .mock-side {
+      display: flex;
+      flex-direction: column;
+      gap: 6px
+    }
+
+    .mock-side .item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 11px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--muted-2);
+      font-family: var(--mono);
+    }
+
+    .mock-side .item.active {
+      background: rgba(101, 204, 101, .08);
+      color: var(--green);
+      border: 1px solid rgba(101, 204, 101, .18)
+    }
+
+    .mock-side .item i {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, .07);
+      display: inline-block
+    }
+
+    .mock-side .item.active i {
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green-glow)
+    }
+
+    .mock-main {
+      display: flex;
+      flex-direction: column;
+      gap: 14px
+    }
+
+    .mock-greet {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 24px;
+      color: #fff;
+      letter-spacing: -.01em
+    }
+
+    .mock-greet em {
+      font-style: normal;
+      color: var(--green);
+      font-family: var(--display);
+      font-weight: 600;
+      font-size: 13px;
+      background: rgba(101, 204, 101, .1);
+      padding: 3px 8px;
+      border-radius: 6px;
+      margin-left: 6px;
+      vertical-align: middle;
+      letter-spacing: .04em
+    }
+
+    .mock-input {
+      border: 1px solid var(--line-2);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--muted-2);
+      background: rgba(255, 255, 255, .03);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .mock-input::after {
+      content: "▍";
+      color: var(--green);
+      animation: blink 1s infinite
+    }
+
+    @keyframes blink {
+      50% {
+        opacity: 0
+      }
+    }
+
+    .mock-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 6px
+    }
+
+    .mock-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      background: linear-gradient(160deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, .0));
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mock-card .tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--green);
+      letter-spacing: .1em;
+      text-transform: uppercase
+    }
+
+    .mock-card h4 {
+      font-size: 13px;
+      font-weight: 500;
+      color: #fff;
+      letter-spacing: -.01em
+    }
+
+    .mock-card p {
+      font-size: 11.5px;
+      color: var(--muted);
+      line-height: 1.45
+    }
+
+    .mock-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(108, 22, 158, .18);
+      border: 1px solid rgba(108, 22, 158, .35);
+      font-family: var(--mono);
+      font-size: 10px;
+      color: #d5a6ff;
+      letter-spacing: .04em;
+      width: max-content
+    }
+
+    .mock-stat {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .02);
+      border: 1px solid var(--line);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted-2)
+    }
+
+    .mock-stat b {
+      color: var(--green);
+      font-weight: 600
+    }
+
+    /* floating chip */
+    .float-chip {
+      position: absolute;
+      right: -14px;
+      top: 38%;
+      background: rgba(11, 13, 19, .85);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--line-2);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: #fff;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, .5);
+      animation: floaty 6s ease-in-out infinite;
+    }
+
+    @keyframes floaty {
+
+      0%,
+      100% {
+        transform: translateY(0)
+      }
+
+      50% {
+        transform: translateY(-10px)
+      }
+    }
+
+    .float-chip .ic {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--green), #1b8a1b);
+      display: grid;
+      place-items: center;
+      color: #001;
+      font-weight: 700
+    }
+
+    .float-chip small {
+      display: block;
+      color: var(--muted);
+      font-size: 9.5px;
+      margin-top: 2px;
+      letter-spacing: .1em
+    }
+
+    /* ============ SECTION HEADERS ============ */
+    .section {
+      padding: 120px 0;
+      position: relative
+    }
+
+    .section-head {
+      max-width: 780px;
+      margin-bottom: 64px
+    }
+
+    .section-head h2 {
+      margin-top: 18px;
+      font-family: var(--display);
+      font-weight: 600;
+      font-size: clamp(36px, 4.4vw, 58px);
+      line-height: 1.02;
+      letter-spacing: -.035em;
+    }
+
+    .section-head h2 .it {
+      font-family: var(--serif);
+      font-style: italic;
+      font-weight: 400;
+      color: #cfd3dc
+    }
+
+    .section-head p {
+      margin-top: 18px;
+      color: var(--muted-2);
+      font-size: 17px;
+      line-height: 1.6;
+      max-width: 640px
+    }
+
+    /* ============ CAPABILITIES GRID ============ */
+    .cap-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, .015)
+    }
+
+    @media (max-width:900px) {
+      .cap-grid {
+        grid-template-columns: repeat(2, 1fr)
+      }
+    }
+
+    @media (max-width:560px) {
+      .cap-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .cap {
+      padding: 28px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      position: relative;
+      transition: background .35s;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .cap:hover {
+      background: rgba(101, 204, 101, .04)
+    }
+
+    .cap-grid>.cap:nth-child(3n) {
+      border-right: none
+    }
+
+    .cap-grid>.cap:nth-last-child(-n+3) {
+      border-bottom: none
+    }
+
+    @media (max-width:900px) {
+      .cap-grid>.cap {
+        border-right: 1px solid var(--line) !important;
+        border-bottom: 1px solid var(--line) !important
+      }
+
+      .cap-grid>.cap:nth-child(2n) {
+        border-right: none !important
+      }
+
+      .cap-grid>.cap:nth-last-child(-n+2) {
+        border-bottom: none !important
+      }
+    }
+
+    .cap-num {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: .1em
+    }
+
+    .cap-ico {
+      width: 42px;
+      height: 42px;
+      border-radius: 11px;
+      background: linear-gradient(160deg, rgba(101, 204, 101, .15), rgba(101, 204, 101, .02));
+      border: 1px solid rgba(101, 204, 101, .25);
+      display: grid;
+      place-items: center;
+      color: var(--green);
+      margin-bottom: 16px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+    }
+
+    .cap-ico svg {
+      width: 20px;
+      height: 20px
+    }
+
+    .cap h3 {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -.02em;
+      margin-bottom: 6px
+    }
+
+    .cap p {
+      font-size: 13.5px;
+      color: var(--muted-2);
+      line-height: 1.55
+    }
+
+    .cap-corner {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: .1em
+    }
+
+    /* alt purple icon */
+    .cap-ico.alt {
+      background: linear-gradient(160deg, rgba(108, 22, 158, .25), rgba(108, 22, 158, .05));
+      border-color: rgba(108, 22, 158, .35);
+      color: #d5a6ff
+    }
+
+    /* ============ FLOW ============ */
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      position: relative;
+    }
+
+    @media (max-width:900px) {
+      .flow {
+        grid-template-columns: 1fr 1fr
+      }
+    }
+
+    @media (max-width:560px) {
+      .flow {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .flow-step {
+      position: relative;
+      padding: 28px 24px;
+      border-radius: 18px;
+      background: linear-gradient(160deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .01));
+      border: 1px solid var(--line-2);
+      backdrop-filter: blur(10px);
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform .3s, border-color .3s;
+    }
+
+    .flow-step:hover {
+      transform: translateY(-4px);
+      border-color: rgba(101, 204, 101, .35)
+    }
+
+    .flow-step::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 18px;
+      padding: 1px;
+      background: linear-gradient(135deg, transparent 30%, rgba(101, 204, 101, .25));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0;
+      transition: opacity .3s;
+      pointer-events: none;
+    }
+
+    .flow-step:hover::before {
+      opacity: 1
+    }
+
+    .flow-num {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--green);
+      letter-spacing: .15em
+    }
+
+    .flow-step h4 {
+      font-family: var(--display);
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -.02em;
+      margin-top: 14px
+    }
+
+    .flow-step p {
+      margin-top: 10px;
+      font-size: 13.5px;
+      color: var(--muted-2);
+      line-height: 1.5
+    }
+
+    .flow-ico {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, .4);
+      border: 1px solid var(--line-2);
+      display: grid;
+      place-items: center;
+      color: var(--green);
+      margin-top: 18px;
+      align-self: flex-start;
+    }
+
+    .flow-ico svg {
+      width: 22px;
+      height: 22px
+    }
+
+    /* connector lines */
+    .flow-step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      right: -13px;
+      top: 50%;
+      width: 14px;
+      height: 1px;
+      background: linear-gradient(90deg, var(--green), transparent);
+      box-shadow: 0 0 6px var(--green-glow);
+    }
+
+    @media (max-width:900px) {
+      .flow-step::after {
+        display: none
+      }
+    }
+
+    /* ============ NOT CHATBOT ============ */
+    .nc-wrap {
+      display: grid;
+      grid-template-columns: .95fr 1.05fr;
+      gap: 60px;
+      align-items: center
+    }
+
+    @media (max-width:1024px) {
+      .nc-wrap {
+        grid-template-columns: 1fr;
+        gap: 36px
+      }
+    }
+
+    .nc-text h2 {
+      font-size: clamp(36px, 4.2vw, 52px);
+      font-family: var(--display);
+      font-weight: 600;
+      letter-spacing: -.03em;
+      line-height: 1.05
+    }
+
+    .nc-text h2 em {
+      font-family: var(--serif);
+      font-style: italic;
+      font-weight: 400;
+      color: var(--green);
+      text-shadow: 0 0 30px var(--green-glow)
+    }
+
+    .nc-text p {
+      margin-top: 24px;
+      color: var(--muted-2);
+      font-size: 16.5px;
+      line-height: 1.65
+    }
+
+    .nc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px
+    }
+
+    @media (max-width:560px) {
+      .nc-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .nc-card {
+      padding: 22px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .025);
+      border: 1px solid var(--line-2);
+      transition: all .3s;
+    }
+
+    .nc-card:hover {
+      background: rgba(101, 204, 101, .05);
+      border-color: rgba(101, 204, 101, .3);
+      transform: translateY(-2px)
+    }
+
+    .nc-card .ic {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: rgba(101, 204, 101, .12);
+      border: 1px solid rgba(101, 204, 101, .25);
+      display: grid;
+      place-items: center;
+      color: var(--green);
+      margin-bottom: 14px
+    }
+
+    .nc-card .ic svg {
+      width: 16px;
+      height: 16px
+    }
+
+    .nc-card h5 {
+      font-size: 14.5px;
+      font-weight: 600;
+      letter-spacing: -.01em
+    }
+
+    .nc-card span {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: .1em;
+      display: block;
+      margin-top: 6px
+    }
+
+    /* ============ ARCHITECTURE ============ */
+    .arch {
+      border: 1px solid var(--line-2);
+      border-radius: 22px;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(11, 13, 19, .85), rgba(6, 7, 10, .95));
+      backdrop-filter: blur(20px);
+      position: relative;
+    }
+
+    .arch::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(800px 300px at 50% -10%, rgba(101, 204, 101, .12), transparent 60%);
+    }
+
+    .arch-row {
+      display: grid;
+      grid-template-columns: 170px 1fr 130px;
+      gap: 0;
+      padding: 22px 28px;
+      border-bottom: 1px solid var(--line);
+      align-items: center;
+      transition: background .3s;
+      position: relative;
+      z-index: 1;
+    }
+
+    .arch-row:last-child {
+      border-bottom: none
+    }
+
+    .arch-row:hover {
+      background: rgba(255, 255, 255, .025)
+    }
+
+    .arch-tag {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--muted);
+      letter-spacing: .15em
+    }
+
+    .arch-name {
+      display: flex;
+      align-items: center;
+      gap: 14px
+    }
+
+    .arch-name .ico {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(101, 204, 101, .18), rgba(101, 204, 101, .02));
+      border: 1px solid rgba(101, 204, 101, .28);
+      color: var(--green);
+    }
+
+    .arch-name .ico.p {
+      background: linear-gradient(135deg, rgba(108, 22, 158, .28), rgba(108, 22, 158, .04));
+      border-color: rgba(108, 22, 158, .4);
+      color: #d5a6ff
+    }
+
+    .arch-name .ico svg {
+      width: 18px;
+      height: 18px
+    }
+
+    .arch-name .info h5 {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -.01em
+    }
+
+    .arch-name .info p {
+      font-size: 12.5px;
+      color: var(--muted-2);
+      margin-top: 3px
+    }
+
+    .arch-bar {
+      height: 6px;
+      background: rgba(255, 255, 255, .05);
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+      margin-right: 24px
+    }
+
+    .arch-bar i {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), #a3e6a3);
+      box-shadow: 0 0 12px var(--green-glow)
+    }
+
+    .arch-bar.p i {
+      background: linear-gradient(90deg, #7a1eb2, #d5a6ff);
+      box-shadow: 0 0 12px var(--purple-glow)
+    }
+
+    @media (max-width:900px) {
+      .arch-row {
+        grid-template-columns: 1fr;
+        gap: 14px
+      }
+
+      .arch-tag {
+        order: -1
+      }
+
+      .arch-bar {
+        margin-right: 0;
+        margin-top: 6px
+      }
+    }
+
+    /* ============ KNOWLEDGE BASE ============ */
+    .kb {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 14px;
+    }
+
+    @media (max-width:900px) {
+      .kb {
+        grid-template-columns: repeat(3, 1fr)
+      }
+    }
+
+    @media (max-width:560px) {
+      .kb {
+        grid-template-columns: repeat(2, 1fr)
+      }
+    }
+
+    .kb-item {
+      padding: 22px 18px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .02);
+      border: 1px solid var(--line);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      transition: all .25s;
+      font-size: 12.5px;
+      color: var(--muted-2);
+      font-family: var(--mono);
+      letter-spacing: .04em;
+    }
+
+    .kb-item:hover {
+      background: rgba(101, 204, 101, .05);
+      border-color: rgba(101, 204, 101, .25);
+      color: #fff;
+      transform: translateY(-3px)
+    }
+
+    .kb-item .ic {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .04);
+      border: 1px solid var(--line-2);
+      display: grid;
+      place-items: center;
+      color: var(--green)
+    }
+
+    .kb-item .ic svg {
+      width: 18px;
+      height: 18px
+    }
+
+    /* ============ BENEFITS ============ */
+    .ben-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px
+    }
+
+    @media (max-width:900px) {
+      .ben-grid {
+        grid-template-columns: 1fr 1fr
+      }
+    }
+
+    @media (max-width:560px) {
+      .ben-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .ben {
+      padding: 30px;
+      border-radius: 18px;
+      background: linear-gradient(160deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .005));
+      border: 1px solid var(--line-2);
+      backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+      transition: transform .3s, border-color .3s;
+    }
+
+    .ben:hover {
+      transform: translateY(-4px);
+      border-color: rgba(101, 204, 101, .35)
+    }
+
+    .ben::after {
+      content: "";
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(101, 204, 101, .18), transparent 70%);
+      top: -40px;
+      right: -40px;
+      filter: blur(20px);
+    }
+
+    .ben:nth-child(2)::after {
+      background: radial-gradient(circle, rgba(108, 22, 158, .22), transparent 70%)
+    }
+
+    .ben:nth-child(4)::after {
+      background: radial-gradient(circle, rgba(108, 22, 158, .22), transparent 70%)
+    }
+
+    .ben:nth-child(6)::after {
+      background: radial-gradient(circle, rgba(108, 22, 158, .22), transparent 70%)
+    }
+
+    .ben .ic {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, .5);
+      border: 1px solid var(--line-2);
+      display: grid;
+      place-items: center;
+      color: var(--green);
+      margin-bottom: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .ben .ic svg {
+      width: 20px;
+      height: 20px
+    }
+
+    .ben h3 {
+      font-size: 19px;
+      font-weight: 600;
+      letter-spacing: -.02em;
+      position: relative;
+      z-index: 1
+    }
+
+    .ben p {
+      margin-top: 8px;
+      font-size: 14px;
+      color: var(--muted-2);
+      line-height: 1.55;
+      position: relative;
+      z-index: 1
+    }
+
+    /* ============ PROFILES ============ */
+    .profiles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .profile {
+      padding: 13px 20px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .025);
+      border: 1px solid var(--line-2);
+      font-family: var(--mono);
+      font-size: 13px;
+      letter-spacing: .02em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all .25s;
+      cursor: default;
+    }
+
+    .profile:hover {
+      background: rgba(101, 204, 101, .08);
+      border-color: rgba(101, 204, 101, .35)
+    }
+
+    .profile-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green-glow)
+    }
+
+    .profile:nth-child(even) .profile-dot {
+      background: #d5a6ff;
+      box-shadow: 0 0 6px var(--purple-glow)
+    }
+
+    /* ============ METRICS ============ */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      border: 1px solid var(--line-2);
+      border-radius: 22px;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, 0));
+      backdrop-filter: blur(14px);
+    }
+
+    @media (max-width:900px) {
+      .metrics {
+        grid-template-columns: 1fr 1fr
+      }
+    }
+
+    @media (max-width:560px) {
+      .metrics {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .metric {
+      padding: 42px 32px;
+      border-right: 1px solid var(--line);
+      position: relative;
+      text-align: left
+    }
+
+    .metrics>.metric:last-child {
+      border-right: none
+    }
+
+    @media (max-width:900px) {
+      .metric {
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line)
+      }
+
+      .metrics>.metric:nth-child(2n) {
+        border-right: none
+      }
+
+      .metrics>.metric:nth-last-child(-n+2) {
+        border-bottom: none
+      }
+    }
+
+    .metric .num {
+      font-family: var(--display);
+      font-weight: 600;
+      letter-spacing: -.04em;
+      font-size: clamp(46px, 5.5vw, 72px);
+      line-height: 1;
+      background: linear-gradient(180deg, #fff, #9a9bab);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .metric .lbl {
+      font-size: 14px;
+      color: var(--muted-2);
+      margin-top: 14px;
+      line-height: 1.4
+    }
+
+    .metric .ico {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: rgba(101, 204, 101, .1);
+      border: 1px solid rgba(101, 204, 101, .25);
+      display: grid;
+      place-items: center;
+      color: var(--green)
+    }
+
+    .metric .ico svg {
+      width: 16px;
+      height: 16px
+    }
+
+    /* ============ CTA FINAL ============ */
+    .cta-final {
+      position: relative;
+      padding: 100px 40px;
+      border-radius: 28px;
+      overflow: hidden;
+      background:
+        radial-gradient(600px 300px at 20% 30%, rgba(108, 22, 158, .35), transparent 60%),
+        radial-gradient(500px 280px at 85% 70%, rgba(101, 204, 101, .18), transparent 60%),
+        linear-gradient(180deg, #0d0f17, #06070A);
+      border: 1px solid var(--line-2);
+      text-align: center;
+    }
+
+    .cta-final::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(255, 255, 255, .04) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse at 50% 50%, #000 30%, transparent 75%);
+    }
+
+    .cta-final h2 {
+      position: relative;
+      font-family: var(--display);
+      font-weight: 600;
+      font-size: clamp(40px, 5.2vw, 72px);
+      line-height: 1.02;
+      letter-spacing: -.04em;
+    }
+
+    .cta-final h2 em {
+      font-family: var(--serif);
+      font-style: italic;
+      font-weight: 400;
+      color: var(--green);
+      text-shadow: 0 0 40px var(--green-glow)
+    }
+
+    .cta-final p {
+      position: relative;
+      margin: 22px auto 0;
+      max-width: 600px;
+      color: var(--muted-2);
+      font-size: 17px;
+      line-height: 1.6
+    }
+
+    .cta-final .btn-primary {
+      position: relative;
+      margin-top: 38px;
+      padding: 16px 28px;
+      font-size: 15px
+    }
+
+    /* ============ FOOTER ============ */
+    footer {
+      padding: 80px 0 40px;
+      border-top: 1px solid var(--line);
+      margin-top: 80px
+    }
+
+    .ft-top {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap: 50px;
+      margin-bottom: 48px
+    }
+
+    @media (max-width:900px) {
+      .ft-top {
+        grid-template-columns: 1fr;
+        gap: 36px
+      }
+    }
+
+    .ft-brand h4 {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 30px;
+      font-weight: 400;
+      letter-spacing: -.01em
+    }
+
+    .ft-brand p {
+      margin-top: 14px;
+      color: var(--muted-2);
+      font-size: 14.5px;
+      line-height: 1.6;
+      max-width: 380px
+    }
+
+    .ft-brand .role {
+      margin-top: 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(101, 204, 101, .08);
+      border: 1px solid rgba(101, 204, 101, .25);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--green);
+      letter-spacing: .06em
+    }
+
+    .ft-col h6 {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      margin-bottom: 18px
+    }
+
+    .ft-col a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+      font-size: 14.5px;
+      color: #fff;
+      transition: color .2s
+    }
+
+    .ft-col a:hover {
+      color: var(--green)
+    }
+
+    .ft-col a .ext {
+      margin-left: auto;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .1em
+    }
+
+    .ft-bot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 30px;
+      border-top: 1px solid var(--line);
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--muted);
+      letter-spacing: .06em;
+      flex-wrap: wrap;
+      gap: 14px
+    }
+
+    .ft-bot .by {
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .ft-bot .by b {
+      color: #fff;
+      font-weight: 500;
+      letter-spacing: 0;
+      font-family: var(--display)
+    }
+
+    /* ============ ANIMATIONS ============ */
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity .8s cubic-bezier(.22, .61, .36, 1), transform .8s cubic-bezier(.22, .61, .36, 1)
+    }
+
+    .reveal.in {
+      opacity: 1;
+      transform: translateY(0)
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="backdrop"></div>
+  <div class="grid-overlay"></div>
+  <div class="noise"></div>
+  <div class="particles" id="particles"></div>
+
+  <!-- ============ NAV ============ -->
+  <nav class="top">
+    <div class="wrap">
+      <a href="#" class="logo" aria-label="NIA">
+        <div class="logo-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v4" />
+            <path d="M12 18v4" />
+            <path d="M4.93 4.93l2.83 2.83" />
+            <path d="M16.24 16.24l2.83 2.83" />
+            <path d="M2 12h4" />
+            <path d="M18 12h4" />
+            <path d="M4.93 19.07l2.83-2.83" />
+            <path d="M16.24 7.76l2.83-2.83" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </div>
+        <div class="logo-text">NIA<small>Neppo Intelligence</small></div>
+      </a>
+      <div class="nav-links">
+        <a href="#capacidades">Capacidades</a>
+        <a href="#fluxo">Fluxo</a>
+        <a href="#arquitetura">Arquitetura</a>
+        <a href="#beneficios">Benefícios</a>
+        <a href="#metricas">Métricas</a>
+      </div>
+      <div class="nav-cta">
+        <a href="https://neppo-team.atlassian.net/wiki/spaces/neppo/overview?homepageId=8486993" target="_blank" rel="noopener noreferrer" class="btn btn-ghost">Documentação</a>
+        <a href="https://chatgpt.com/g/g-6a14d0af1dd481918830d48c7ece96ed-neppo-ai" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Acessar IA
+          <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M5 12h14M13 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <div class="container">
+      <div class="hero-inner">
+        <div class="hero-text reveal">
+          <div class="badge">
+            <span class="badge-dot">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+              </svg>
+            </span>
+            Powered by <strong>Neppo AI</strong>
+          </div>
+
+          <h1 class="hero-title">
+            <span class="hero-grad">NIA.</span>
+            <span class="sub">Neppo Intelligence <em>Architect</em></span>
+          </h1>
+
+          <p class="hero-desc">
+            IA especializada no ecossistema <strong style="color:#fff;font-weight:500">Neppo Omnichannel</strong> para acelerar implantações, resolver dúvidas técnicas, apoiar arquiteturas de integração e potencializar operações de atendimento digital.
+          </p>
+
+          <div class="hero-cta">
+            <a href="https://chatgpt.com/g/g-6a14d0af1dd481918830d48c7ece96ed-neppo-ai" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+              Acessar IA
+              <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <path d="M5 12h14M13 5l7 7-7 7" />
+              </svg>
+            </a>
+            <a href="#capacidades" class="btn btn-ghost">
+              Conhecer Capacidades
+            </a>
+          </div>
+
+          <div class="hero-meta">
+            <div class="meta-item"><span class="pulse"></span>SISTEMA ONLINE</div>
+            <div class="meta-item">v 2.4 · RAG ATIVO</div>
+            <div class="meta-item">LATÊNCIA · 220ms</div>
+          </div>
+        </div>
+
+        <!-- MOCKUP -->
+        <div class="mockup reveal" style="transition-delay:.15s">
+          <div class="mockup-bar">
+            <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+            <span class="url">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <rect x="3" y="11" width="18" height="11" rx="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              nia.neppo.ai
+            </span>
+          </div>
+          <div class="mockup-body">
+            <div class="mock-side">
+              <div class="item active"><i></i>Conversa</div>
+              <div class="item"><i></i>Base RAG</div>
+              <div class="item"><i></i>APIs Neppo</div>
+              <div class="item"><i></i>Bots</div>
+              <div class="item"><i></i>Voice</div>
+              <div class="item"><i></i>Histórico</div>
+            </div>
+            <div class="mock-main">
+              <div class="mock-greet">Como posso ajudar com Neppo? <em>NIA</em></div>
+              <div class="mock-input">Como configurar o WhatsApp Cloud API via Embedded Signup?</div>
+              <span class="mock-pill">● Processando · RAG · 14 fontes consultadas</span>
+              <div class="mock-cards">
+                <div class="mock-card">
+                  <span class="tag">FONTE 01</span>
+                  <h4>WhatsApp BSP — Onboarding</h4>
+                  <p>Guia oficial Neppo de ativação BSP com Meta. Aplica-se à etapa de signup.</p>
+                </div>
+                <div class="mock-card">
+                  <span class="tag">FONTE 02</span>
+                  <h4>APIs · Templates Cloud</h4>
+                  <p>Endpoints para envio e aprovação de HSM templates aprovados pela Meta.</p>
+                </div>
+              </div>
+              <div class="mock-stat">
+                <span>Confiança da resposta</span><b>98.4%</b>
+              </div>
+            </div>
+          </div>
+          <div class="float-chip">
+            <div class="ic">N</div>
+            <div>Treinado em<small>+500 DOCUMENTOS NEPPO</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ CAPABILITIES ============ -->
+  <section class="section" id="capacidades">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">01 · Capacidades</span>
+        <h2>O que a IA <span class="it">consegue fazer</span></h2>
+        <p>Dez domínios de conhecimento profundo, cobrindo todo o ciclo de vida de produtos omnichannel — da arquitetura à operação.</p>
+      </div>
+
+      <div class="cap-grid reveal">
+        <!-- 1 -->
+        <div class="cap">
+          <div>
+            <div class="cap-ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+              </svg>
+            </div>
+            <h3>WhatsApp Business Platform</h3>
+            <p>Cloud API, Embedded Signup, BSUID, templates HSM e ecossistema Meta.</p>
+          </div>
+          <span class="cap-corner">/01</span>
+        </div>
+        <!-- 2 -->
+        <div class="cap">
+          <div>
+            <div class="cap-ico alt">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+            </div>
+            <h3>Omnichannel</h3>
+            <p>WhatsApp, Instagram, Messenger, Telegram, Webchat e todos os canais digitais.</p>
+          </div>
+          <span class="cap-corner">/02</span>
+        </div>
+        <!-- 3 -->
+        <div class="cap">
+          <div>
+            <div class="cap-ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="10" rx="2" />
+                <circle cx="12" cy="5" r="2" />
+                <path d="M12 7v4M8 16h.01M16 16h.01" />
+              </svg>
+            </div>
+            <h3>Bots e Fluxos</h3>
+            <p>Builder visual, jornadas conversacionais, automações e integrações.</p>
+          </div>
+          <span class="cap-corner">/03</span>
+        </div>
+        <!-- 4 -->
+        <div class="cap">
+          <div>
+            <div class="cap-ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />
+              </svg>
+            </div>
+            <h3>Voice Agents</h3>
+            <p>URA inteligente, agentes de voz, ASR/TTS e camadas de IA generativa.</p>
+          </div>
+          <span class="cap-corner">/04</span>
+        </div>
+        <!-- 5 -->
+        <div class="cap">
+          <div>
+            <div class="cap-ico alt">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
+              </svg>
+            </div>
+            <h3>APIs Neppo</h3>
+            <p>Endpoints, autenticação, integrações, exemplos práticos e troubleshooting.</p>
+          </div>
+          <span class="cap-corner">/05</span>
+        </div>
+        <!-- 6 -->
+        <div class="cap">
+          <div>
+            <div class="cap-ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <path d="M14 17.5h7M17.5 14v7" />
+              </svg>
+            </div>
+            <h3>Arquitetura de Solução</h3>
+            <p>Desenho técnico, definição de integrações e mapeamento end-to-end.</p>
+          </div>
+          <span class="cap-corner">/06</span>
+        </div>
+        <!-- 7 -->
+        <div class="cap">
+          <div>
+            <div class="cap-ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </div>
+            <h3>Customer Success</h3>
+            <p>Boas práticas, estratégias de adoção e crescimento de uso.</p>
+          </div>
+          <span class="cap-corner">/07</span>
+        </div>
+        <!-- 8 -->
+        <div class="cap">
+          <div>
+            <div class="cap-ico alt">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+            </div>
+            <h3>Produto</h3>
+            <p>Discovery, métricas, roadmap, OKRs e gestão de produto digital.</p>
+          </div>
+          <span class="cap-corner">/08</span>
+        </div>
+        <!-- 9 -->
+        <div class="cap">
+          <div>
+            <div class="cap-ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+              </svg>
+            </div>
+            <h3>Implantação</h3>
+            <p>Configuração, ativação de ambientes e go-live de projetos.</p>
+          </div>
+          <span class="cap-corner">/09</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FLOW ============ -->
+  <section class="section" id="fluxo" style="padding-top:0">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">02 · Processo</span>
+        <h2>Como a IA <span class="it">processa sua pergunta</span></h2>
+        <p>Um pipeline em quatro estágios, otimizado para precisão técnica e contexto Neppo.</p>
+      </div>
+
+      <div class="flow reveal">
+        <div class="flow-step">
+          <div>
+            <span class="flow-num">/STEP 01</span>
+            <h4>Entendimento</h4>
+            <p>Compreende contexto, intenção e objetivo da pergunta.</p>
+          </div>
+          <div class="flow-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div>
+            <span class="flow-num">/STEP 02</span>
+            <h4>Recuperação</h4>
+            <p>Busca conhecimento relevante na base RAG da Neppo.</p>
+          </div>
+          <div class="flow-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <ellipse cx="12" cy="5" rx="9" ry="3" />
+              <path d="M3 5v14a9 3 0 0 0 18 0V5M3 12a9 3 0 0 0 18 0" />
+            </svg>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div>
+            <span class="flow-num">/STEP 03</span>
+            <h4>Análise</h4>
+            <p>Correlaciona documentação, APIs e melhores práticas.</p>
+          </div>
+          <div class="flow-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3v18h18" />
+              <path d="m7 14 4-4 4 4 5-5" />
+            </svg>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div>
+            <span class="flow-num">/STEP 04</span>
+            <h4>Resposta</h4>
+            <p>Entrega orientação técnica, estratégica e contextualizada.</p>
+          </div>
+          <div class="flow-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NOT CHATBOT ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="nc-wrap">
+        <div class="nc-text reveal">
+          <span class="eyebrow">03 · Diferencial</span>
+          <h2 style="margin-top:18px">Não é um chatbot genérico.<br><em>Especialista no Ecossistema Neppo.</em></h2>
+          <p>Enquanto modelos genéricos respondem sobre qualquer assunto, o NIA foi treinado especificamente para entender os <strong style="color:#fff;font-weight:500">produtos, integrações, APIs, arquitetura e processos</strong> da Neppo. Respostas precisas, com fontes, contexto técnico e profundidade de domínio.</p>
+        </div>
+
+        <div class="nc-grid reveal" style="transition-delay:.1s">
+          <div class="nc-card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg></div>
+            <h5>Conhecimento especializado</h5>
+            <span>/ 01 · DEEP DOMAIN</span>
+          </div>
+          <div class="nc-card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
+              </svg></div>
+            <h5>Respostas técnicas profundas</h5>
+            <span>/ 02 · TECHNICAL</span>
+          </div>
+          <div class="nc-card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+              </svg></div>
+            <h5>Base documental integrada</h5>
+            <span>/ 03 · RAG NATIVE</span>
+          </div>
+          <div class="nc-card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="2" y1="12" x2="22" y2="12" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg></div>
+            <h5>Contexto omnichannel</h5>
+            <span>/ 04 · MULTI-CHANNEL</span>
+          </div>
+          <div class="nc-card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg></div>
+            <h5>Arquitetura corporativa</h5>
+            <span>/ 05 · ENTERPRISE</span>
+          </div>
+          <div class="nc-card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5" />
+              </svg></div>
+            <h5>Melhores práticas de mercado</h5>
+            <span>/ 06 · INDUSTRY</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ARCHITECTURE ============ -->
+  <section class="section" id="arquitetura">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">04 · Camadas</span>
+        <h2>Arquitetura de <span class="it">Conhecimento</span></h2>
+        <p>Sete camadas estruturadas que cobrem toda a stack — da experiência do cliente final até a infraestrutura cloud.</p>
+      </div>
+
+      <div class="arch reveal">
+        <div class="arch-row">
+          <span class="arch-tag">/ L1 · EXPERIÊNCIA</span>
+          <div class="arch-name">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+              </svg></div>
+            <div class="info">
+              <h5>Experiência Omnichannel</h5>
+              <p>WhatsApp, Instagram, Messenger, Telegram e Webchat.</p>
+            </div>
+          </div>
+          <div class="arch-bar"><i style="width:96%"></i></div>
+        </div>
+        <div class="arch-row">
+          <span class="arch-tag">/ L2 · INTELIGÊNCIA</span>
+          <div class="arch-name">
+            <div class="ico p"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <circle cx="12" cy="12" r="9" />
+              </svg></div>
+            <div class="info">
+              <h5>IA Conversacional</h5>
+              <p>LLMs, Prompt Engineering, RAG e agentes inteligentes.</p>
+            </div>
+          </div>
+          <div class="arch-bar p"><i style="width:92%"></i></div>
+        </div>
+        <div class="arch-row">
+          <span class="arch-tag">/ L3 · AUTOMAÇÃO</span>
+          <div class="arch-name">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="10" rx="2" />
+                <circle cx="12" cy="5" r="2" />
+                <path d="M12 7v4M8 16h.01M16 16h.01" />
+              </svg></div>
+            <div class="info">
+              <h5>Bots e Automações</h5>
+              <p>Fluxos, jornadas conversacionais e regras de negócio.</p>
+            </div>
+          </div>
+          <div class="arch-bar"><i style="width:90%"></i></div>
+        </div>
+        <div class="arch-row">
+          <span class="arch-tag">/ L4 · INTEGRAÇÃO</span>
+          <div class="arch-name">
+            <div class="ico p"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
+              </svg></div>
+            <div class="info">
+              <h5>Integrações</h5>
+              <p>ERP, CRM, APIs REST, Webhooks e Middleware corporativo.</p>
+            </div>
+          </div>
+          <div class="arch-bar p"><i style="width:88%"></i></div>
+        </div>
+        <div class="arch-row">
+          <span class="arch-tag">/ L5 · DADOS</span>
+          <div class="arch-name">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <ellipse cx="12" cy="5" rx="9" ry="3" />
+                <path d="M3 5v14a9 3 0 0 0 18 0V5" />
+                <path d="M3 12a9 3 0 0 0 18 0" />
+              </svg></div>
+            <div class="info">
+              <h5>Dados</h5>
+              <p>Banco de dados, métricas, analytics e observabilidade.</p>
+            </div>
+          </div>
+          <div class="arch-bar"><i style="width:85%"></i></div>
+        </div>
+        <div class="arch-row">
+          <span class="arch-tag">/ L6 · PLATAFORMA</span>
+          <div class="arch-name">
+            <div class="ico p"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg></div>
+            <div class="info">
+              <h5>Plataforma Neppo</h5>
+              <p>Produtos, módulos e arquitetura interna proprietária.</p>
+            </div>
+          </div>
+          <div class="arch-bar p"><i style="width:94%"></i></div>
+        </div>
+        <div class="arch-row">
+          <span class="arch-tag">/ L7 · INFRAESTRUTURA</span>
+          <div class="arch-name">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+              </svg></div>
+            <div class="info">
+              <h5>Infraestrutura</h5>
+              <p>Cloud, segurança, escalabilidade e performance.</p>
+            </div>
+          </div>
+          <div class="arch-bar"><i style="width:82%"></i></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ KNOWLEDGE BASE ============ -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">05 · Fontes</span>
+        <h2>Base de Conhecimento <span class="it">Integrada</span></h2>
+        <p>Conectada diretamente às fontes oficiais Neppo e Meta, com indexação contínua e RAG nativo.</p>
+      </div>
+
+      <div class="kb reveal">
+        <div class="kb-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg></div>Confluence
+        </div>
+        <div class="kb-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M9 9h6v6H9z" />
+            </svg></div>Jira
+        </div>
+        <div class="kb-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
+            </svg></div>API Docs
+        </div>
+        <div class="kb-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg></div>Swagger
+        </div>
+        <div class="kb-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+            </svg></div>Playbooks
+        </div>
+        <div class="kb-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="9" y1="15" x2="15" y2="15" />
+            </svg></div>Guias Implantação
+        </div>
+        <div class="kb-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg></div>Arquiteturas Ref.
+        </div>
+        <div class="kb-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            </svg></div>Catálogo APIs
+        </div>
+        <div class="kb-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="10" rx="2" />
+              <circle cx="12" cy="5" r="2" />
+              <path d="M12 7v4" />
+            </svg></div>Docs Bots
+        </div>
+        <div class="kb-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            </svg></div>Docs Voice
+        </div>
+        <div class="kb-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M2 12h20" />
+            </svg></div>Meta Docs
+        </div>
+        <div class="kb-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+            </svg></div>WhatsApp BSP
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BENEFITS ============ -->
+  <section class="section" id="beneficios" style="padding-top:0">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">06 · Benefícios</span>
+        <h2>Resultados que <span class="it">aceleram operações</span></h2>
+        <p>Ganhos tangíveis em produtividade, onboarding, autonomia e escalabilidade do conhecimento corporativo.</p>
+      </div>
+
+      <div class="ben-grid reveal">
+        <div class="ben">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg></div>
+          <h3>Menos Tempo de Busca</h3>
+          <p>Informação centralizada em um único especialista — sem caçar entre dezenas de fontes.</p>
+        </div>
+        <div class="ben">
+          <div class="ic" style="color:#d5a6ff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+            </svg></div>
+          <h3>Resolução Mais Rápida</h3>
+          <p>Respostas instantâneas com fontes citadas, exemplos e próximos passos.</p>
+        </div>
+        <div class="ben">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg></div>
+          <h3>Menos Dependência</h3>
+          <p>Autonomia para equipes resolverem dúvidas sem escalar a especialistas.</p>
+        </div>
+        <div class="ben">
+          <div class="ic" style="color:#d5a6ff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3v18h18" />
+              <path d="m7 14 4-4 4 4 5-5" />
+            </svg></div>
+          <h3>Mais Produtividade</h3>
+          <p>Menos tempo gasto buscando documentação, mais tempo entregando valor.</p>
+        </div>
+        <div class="ben">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 14l9-5-9-5-9 5 9 5z" />
+              <path d="M12 14l6.16-3.422a12.083 12.083 0 0 1 .665 6.479A11.952 11.952 0 0 0 12 20.055a11.952 11.952 0 0 0-6.824-2.998 12.078 12.078 0 0 1 .665-6.479L12 14z" />
+            </svg></div>
+          <h3>Melhor Onboarding</h3>
+          <p>Aprendizado acelerado para novos profissionais entrarem em ritmo rapidamente.</p>
+        </div>
+        <div class="ben">
+          <div class="ic" style="color:#d5a6ff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg></div>
+          <h3>Escalabilidade</h3>
+          <p>Conhecimento corporativo acessível para toda a empresa, 24/7, sem gargalos.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PROFILES ============ -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">07 · Audiência</span>
+        <h2>Quem utiliza <span class="it">o NIA</span></h2>
+        <p>Profissionais multidisciplinares em todo o ciclo de vida de produtos omnichannel.</p>
+      </div>
+
+      <div class="profiles reveal">
+        <div class="profile"><span class="profile-dot"></span>Product Managers</div>
+        <div class="profile"><span class="profile-dot"></span>Product Owners</div>
+        <div class="profile"><span class="profile-dot"></span>Desenvolvedores</div>
+        <div class="profile"><span class="profile-dot"></span>Arquitetos de Solução</div>
+        <div class="profile"><span class="profile-dot"></span>Implantação</div>
+        <div class="profile"><span class="profile-dot"></span>Customer Success</div>
+        <div class="profile"><span class="profile-dot"></span>Operações</div>
+        <div class="profile"><span class="profile-dot"></span>Consultores</div>
+        <div class="profile"><span class="profile-dot"></span>Pré-Vendas</div>
+        <div class="profile"><span class="profile-dot"></span>Suporte</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ METRICS ============ -->
+  <section class="section" id="metricas" style="padding-top:0">
+    <div class="container">
+      <div class="metrics reveal">
+        <div class="metric">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg></div>
+          <div class="num">+5.000</div>
+          <div class="lbl">Perguntas respondidas</div>
+        </div>
+        <div class="metric">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg></div>
+          <div class="num">+500</div>
+          <div class="lbl">Profissionais apoiados</div>
+        </div>
+        <div class="metric">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4" />
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+            </svg></div>
+          <div class="num">95%</div>
+          <div class="lbl">Satisfação dos usuários</div>
+        </div>
+        <div class="metric">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg></div>
+          <div class="num">24/7</div>
+          <div class="lbl">Disponibilidade contínua</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CTA FINAL ============ -->
+  <section class="section" id="cta" style="padding-top:0">
+    <div class="container">
+      <div class="cta-final reveal">
+        <span class="eyebrow" style="position:relative">FINAL · ACESSO</span>
+        <h2 style="margin-top:18px">Transforme conhecimento<br>em <em>velocidade</em>.</h2>
+        <p>Acesse um especialista virtual treinado exclusivamente para o universo Neppo Omnichannel.</p>
+        <a href="https://chatgpt.com/g/g-6a14d0af1dd481918830d48c7ece96ed-neppo-ai" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+          Acessar NIA
+          <svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M5 12h14M13 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer>
+    <div class="container">
+      <div class="ft-top">
+        <div class="ft-brand">
+          <h4>NIA — Neppo Intelligence Architect</h4>
+          <p>Uma IA treinada para apoiar Product Managers, Product Owners, Desenvolvedores, Arquitetos, Implantação, CS, Operações e Consultores no ecossistema Neppo.</p>
+          <span class="role">● CRIADO POR · VALDSON SOUZA</span>
+        </div>
+        <div class="ft-col">
+          <h6>Produto</h6>
+          <a href="#capacidades">Capacidades<span class="ext">↗</span></a>
+          <a href="#fluxo">Processo<span class="ext">↗</span></a>
+          <a href="#arquitetura">Arquitetura<span class="ext">↗</span></a>
+          <a href="#metricas">Métricas<span class="ext">↗</span></a>
+        </div>
+        <div class="ft-col">
+          <h6>Conecte-se</h6>
+          <a href="#">LinkedIn<span class="ext">↗</span></a>
+          <a href="#">GitHub<span class="ext">↗</span></a>
+          <a href="https://neppo-team.atlassian.net/wiki/spaces/neppo/overview?homepageId=8486993" target="_blank" rel="noopener noreferrer">Documentação<span class="ext">↗</span></a>
+          <a href="https://chatgpt.com/g/g-6a14d0af1dd481918830d48c7ece96ed-neppo-ai" target="_blank" rel="noopener noreferrer">Acessar NIA<span class="ext">↗</span></a>
+        </div>
+      </div>
+      <div class="ft-bot">
+        <div class="by">
+          <span>VALDSON SOUZA</span><span style="color:rgba(255,255,255,.2)">·</span><span>AI PRODUCT MANAGER</span>
+        </div>
+        <div>© 2025 NEPPO · ALL RIGHTS RESERVED</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Particles
+    (function () {
+      const wrap = document.getElementById('particles');
+      const count = 38;
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('span');
+        p.className = 'particle' + (Math.random() > .6 ? ' p' : '');
+        const left = Math.random() * 100;
+        const delay = Math.random() * 18;
+        const dur = 14 + Math.random() * 12;
+        const startY = 100 + Math.random() * 40;
+        p.style.left = left + '%';
+        p.style.top = startY + 'vh';
+        p.style.animationDelay = (-delay) + 's';
+        p.style.animationDuration = dur + 's';
+        p.style.opacity = (.3 + Math.random() * .5).toFixed(2);
+        wrap.appendChild(p);
+      }
+    })();
+
+    // Reveal on scroll
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('in');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: .12, rootMargin: '0px 0px -8% 0px' });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  </script>
+</body>
+
+</html>
